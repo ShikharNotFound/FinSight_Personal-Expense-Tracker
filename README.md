@@ -3,15 +3,6 @@
 FinSight is a full‑stack personal finance application designed to help users track expenses, set financial goals, and gain insights into their spending habits. The project currently includes a secure authentication system, a points‑based gamification layer, and a modern React dashboard. Future iterations will incorporate machine learning for intelligent expense categorization and personalized financial advice.
 
 
-## 📸 Screenshots
-
-<!-- Add actual screenshots of your dashboard and login page here -->
-<p align="center">
-  <img src="https://via.placeholder.com/600x400?text=Dashboard+Screenshot" alt="Dashboard" width="45%">
-  &nbsp; &nbsp;
-  <img src="https://via.placeholder.com/600x400?text=Login+Screenshot" alt="Login" width="45%">
-</p>
-
 ## ✨ Features
 
 ### ✅ Implemented
