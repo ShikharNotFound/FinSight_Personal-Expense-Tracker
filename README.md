@@ -82,7 +82,7 @@ INITIAL_USER_POINTS=100
 Start the Flask server:
 
 ```bash
-python auth.py
+python auth_server.py
 ```
 The API will be available at http://localhost:8001.
 
@@ -91,7 +91,6 @@ The API will be available at http://localhost:8001.
 Open a new terminal:
 
 ```bash
-cd frontend
 npm install
 npm run dev
 ```
