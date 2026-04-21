@@ -28,6 +28,7 @@ FinSight is a full‑stack personal finance application designed to help users t
 | Axios                  | python‑dotenv          |               |
 
 ## 📁 Project Structure
+```text
 FinSight/
 ├── backend/
 │ ├── auth.py # Authentication & points API
@@ -43,7 +44,7 @@ FinSight/
 │ ├── package.json
 │ └── vite.config.js
 └── README.md
-
+```
 
 
 ## 🚀 Getting Started
