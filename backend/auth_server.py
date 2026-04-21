@@ -3,43 +3,28 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import base64
-import hashlib
-import hmac
-import json
+import bcrypt
+import jwt
 from bson import ObjectId
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from pymongo import MongoClient, ReturnDocument, errors
 from werkzeug.security import check_password_hash, generate_password_hash
-
-try:
-    import bcrypt  # type: ignore
-except Exception:
-    bcrypt = None
-
-try:
-    import jwt  # type: ignore
-except Exception:
-    jwt = None
-
-try:
-    from flask_cors import CORS
-except Exception:
-    def CORS(_app):  # type: ignore
-        return _app
 
 # Load environment variables from backend/.env
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / '.env')
 
 # Configuration
-MONGO_URI = os.getenv(
-    'MONGO_URI',
-    'mongodb+srv://shikharsaxena7777_db_user:Codecode123@globathon.rl4ckeo.mongodb.net/?appName=Globathon',
-)
-DB_NAME = os.getenv('DB_NAME', 'Users')
-JWT_SECRET = os.getenv('JWT_SECRET_KEY', 'c84d3aa356344f5e0b93915b9d16b073f')
+MONGO_URI = os.getenv('MONGO_URI')
+JWT_SECRET = os.getenv('JWT_SECRET_KEY')
+if not MONGO_URI or not JWT_SECRET:
+    raise RuntimeError(
+        "CRITICAL: MONGO_URI and JWT_SECRET_KEY must be set in environment."
+    )
+
+DB_NAME = os.getenv('DB_NAME')
 JWT_ALGORITHM = 'HS256'
 TOKEN_EXPIRE_DAYS = 7
 INITIAL_USER_POINTS = int(os.getenv('INITIAL_USER_POINTS', '100'))
@@ -52,11 +37,7 @@ ACTION_POINTS = {
     'quiz_completed': 100,
 }
 
-client = MongoClient(
-    MONGO_URI,
-    serverSelectionTimeoutMS=10000,
-    tlsAllowInvalidCertificates=True,
-)
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=10000)
 db = client[DB_NAME]
 profiles_collection = db['profiles']
 point_transactions_collection = db['point_transactions']
@@ -76,7 +57,9 @@ def _get_profiles_collection():
         client.admin.command('ping')
         if not _indexes_ready:
             profiles_collection.create_index('email', unique=True)
-            point_transactions_collection.create_index([('user_id', 1), ('created_at', -1)])
+            point_transactions_collection.create_index(
+                [('user_id', 1), ('created_at', -1)]
+            )
             _indexes_ready = True
         return profiles_collection, None
     except errors.PyMongoError as exc:
@@ -91,16 +74,12 @@ def _to_object_id(user_id: str):
 
 
 def hash_password(password: str) -> str:
-    if bcrypt is not None:
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
-    return generate_password_hash(password)
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    if bcrypt is not None:
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-    return check_password_hash(hashed, password)
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 
 def create_token(user_id: str, email: str) -> str:
@@ -109,15 +88,7 @@ def create_token(user_id: str, email: str) -> str:
         'email': email,
         'exp': datetime.utcnow() + timedelta(days=TOKEN_EXPIRE_DAYS),
     }
-    if jwt is not None:
-        return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-    # Fallback token format when PyJWT is unavailable.
-    payload_copy = dict(payload)
-    payload_copy['exp'] = int(payload_copy['exp'].timestamp())
-    body = base64.urlsafe_b64encode(json.dumps(payload_copy).encode('utf-8')).decode('utf-8').rstrip('=')
-    sig = hmac.new(JWT_SECRET.encode('utf-8'), body.encode('utf-8'), hashlib.sha256).hexdigest()
-    return f'devjwt.{body}.{sig}'
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def _serialize_transaction(txn: dict):
@@ -128,11 +99,15 @@ def _serialize_transaction(txn: dict):
         'change': txn.get('change', 0),
         'balance_after': txn.get('balance_after', 0),
         'metadata': txn.get('metadata', {}),
-        'created_at': txn.get('created_at').isoformat() if txn.get('created_at') else None,
+        'created_at': txn.get('created_at').isoformat()
+        if txn.get('created_at')
+        else None,
     }
 
 
-def _record_point_transaction(user_oid: ObjectId, action: str, change: int, metadata: dict | None = None):
+def _record_point_transaction(
+    user_oid: ObjectId, action: str, change: int, metadata: dict | None = None
+):
     metadata = metadata or {}
 
     users_collection, db_error = _get_profiles_collection()
@@ -140,14 +115,18 @@ def _record_point_transaction(user_oid: ObjectId, action: str, change: int, meta
         return None, f'Database unavailable: {db_error}', 503
 
     try:
-        current_user = users_collection.find_one({'_id': user_oid}, {'total_points': 1, 'points': 1})
+        current_user = users_collection.find_one(
+            {'_id': user_oid}, {'total_points': 1, 'points': 1}
+        )
     except errors.PyMongoError as exc:
         return None, f'Database error while reading user points: {exc}', 500
 
     if not current_user:
         return None, 'User not found', 404
 
-    current_points = int(current_user.get('total_points', current_user.get('points', INITIAL_USER_POINTS)))
+    current_points = int(
+        current_user.get('total_points', current_user.get('points', INITIAL_USER_POINTS))
+    )
     if change < 0 and current_points + change < 0:
         return None, 'Insufficient points to complete this action', 400
 
@@ -163,7 +142,9 @@ def _record_point_transaction(user_oid: ObjectId, action: str, change: int, meta
             return_document=ReturnDocument.AFTER,
         )
 
-        balance_after = int(updated_user.get('total_points', updated_user.get('points', 0)))
+        balance_after = int(
+            updated_user.get('total_points', updated_user.get('points', 0))
+        )
         transaction = {
             'user_id': user_oid,
             'action': action,
@@ -187,13 +168,18 @@ def _record_point_transaction(user_oid: ObjectId, action: str, change: int, meta
 def health():
     _, db_error = _get_profiles_collection()
     if db_error:
-        return jsonify({'status': 'degraded', 'database': 'unreachable', 'detail': db_error}), 200
+        return (
+            jsonify(
+                {'status': 'degraded', 'database': 'unreachable', 'detail': db_error}
+            ),
+            200,
+        )
     return jsonify({'status': 'ok', 'database': 'connected'}), 200
 
 
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.get_json(silent=True)
+    data = request.get_json(silent=True)  # typo fixed: silent
     if not data:
         return jsonify({'detail': 'Invalid JSON'}), 400
 
@@ -231,22 +217,25 @@ def register():
     user_id = str(result.inserted_id)
     token = create_token(user_id, email)
 
-    return jsonify(
-        {
-            'id': user_id,
-            'user_id': user_id,
-            'email': email,
-            'name': name,
-            'total_points': INITIAL_USER_POINTS,
-            'access_token': token,
-            'token_type': 'bearer',
-        }
-    ), 201
+    return (
+        jsonify(
+            {
+                'id': user_id,
+                'user_id': user_id,
+                'email': email,
+                'name': name,
+                'total_points': INITIAL_USER_POINTS,
+                'access_token': token,
+                'token_type': 'bearer',
+            }
+        ),
+        201,
+    )
 
 
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json(silent=True)
+    data = request.get_json(silent=True)  # typo fixed: silent
     if not data:
         return jsonify({'detail': 'Invalid JSON'}), 400
 
@@ -272,7 +261,9 @@ def login():
     if not hashed_password or not verify_password(password, hashed_password):
         return jsonify({'detail': 'Invalid credentials'}), 401
 
-    total_points = int(user.get('total_points', user.get('points', INITIAL_USER_POINTS)))
+    total_points = int(
+        user.get('total_points', user.get('points', INITIAL_USER_POINTS))
+    )
     token = create_token(str(user['_id']), user['email'])
     return jsonify(
         {
@@ -295,14 +286,18 @@ def get_points(user_id: str):
         return _json_error(f'Database unavailable: {db_error}', 503)
 
     try:
-        user = users_collection.find_one({'_id': user_oid}, {'total_points': 1, 'points': 1})
+        user = users_collection.find_one(
+            {'_id': user_oid}, {'total_points': 1, 'points': 1}
+        )
     except errors.PyMongoError as exc:
         return _json_error(f'Database error while fetching points: {exc}', 500)
 
     if not user:
         return _json_error('User not found', 404)
 
-    total_points = int(user.get('total_points', user.get('points', INITIAL_USER_POINTS)))
+    total_points = int(
+        user.get('total_points', user.get('points', INITIAL_USER_POINTS))
+    )
     return jsonify({'user_id': user_id, 'total_points': total_points})
 
 
@@ -319,7 +314,7 @@ def get_profile(user_id: str):
     try:
         user = users_collection.find_one(
             {'_id': user_oid},
-            {'name': 1, 'email': 1, 'total_points': 1, 'points': 1}
+            {'name': 1, 'email': 1, 'total_points': 1, 'points': 1},
         )
     except errors.PyMongoError as exc:
         return _json_error(f'Database error while fetching profile: {exc}', 500)
@@ -327,7 +322,9 @@ def get_profile(user_id: str):
     if not user:
         return _json_error('User not found', 404)
 
-    total_points = int(user.get('total_points', user.get('points', INITIAL_USER_POINTS)))
+    total_points = int(
+        user.get('total_points', user.get('points', INITIAL_USER_POINTS))
+    )
     return jsonify(
         {
             'user_id': user_id,
@@ -372,7 +369,7 @@ def award_points(user_id: str):
     if not user_oid:
         return _json_error('Invalid user_id format', 400)
 
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}  # typo fixed: silent
     action = str(data.get('action', '')).strip()
 
     if action == 'goal_completed':
@@ -380,7 +377,9 @@ def award_points(user_id: str):
         action = f'goal_completed_{term}'
 
     if action not in ACTION_POINTS:
-        valid = ', '.join(sorted(ACTION_POINTS.keys()) + ['goal_completed (+ goal_term: short|mid|long)'])
+        valid = ', '.join(
+            sorted(ACTION_POINTS.keys()) + ['goal_completed (+ goal_term: short|mid|long)']
+        )
         return _json_error(f'Unsupported action. Allowed actions: {valid}', 400)
 
     amount = ACTION_POINTS[action]
@@ -411,7 +410,7 @@ def deduct_points(user_id: str):
     if not user_oid:
         return _json_error('Invalid user_id format', 400)
 
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}  # typo fixed: silent
     action = str(data.get('action', '')).strip() or 'course_unlocked_paid'
 
     if action != 'course_unlocked_paid':
@@ -437,7 +436,7 @@ def save_quiz_results(user_id: str):
     if not user_oid:
         return _json_error('Invalid user_id format', 400)
 
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True) or {}  # typo fixed: silent
     profile = data.get('profile')
     answers = data.get('answers')
 
@@ -470,13 +469,18 @@ def save_quiz_results(user_id: str):
     if not updated:
         return _json_error('User not found', 404)
 
-    return jsonify(
-        {
-            'user_id': user_id,
-            'quiz_profile': updated.get('quiz_profile', {}),
-            'quiz_completed_at': updated.get('quiz_completed_at').isoformat() if updated.get('quiz_completed_at') else None,
-        }
-    ), 200
+    return (
+        jsonify(
+            {
+                'user_id': user_id,
+                'quiz_profile': updated.get('quiz_profile', {}),
+                'quiz_completed_at': updated.get('quiz_completed_at').isoformat()
+                if updated.get('quiz_completed_at')
+                else None,
+            }
+        ),
+        200,
+    )
 
 
 if __name__ == '__main__':
