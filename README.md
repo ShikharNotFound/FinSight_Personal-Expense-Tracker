@@ -100,10 +100,3 @@ The React development server will start at http://localhost:5173.
 4. Access the Application
 Visit http://localhost:5173 in your browser. Register a new account to start using FinSight.
 
-🔐 Environment Variables
-Variable	Description	Required
-MONGO_URI	MongoDB connection string	Yes
-JWT_SECRET_KEY	Secret key for signing JWT tokens	Yes
-DB_NAME	Name of the MongoDB database (default: Users)	No
-AUTH_PORT	Port for the Flask auth server (default: 8001)	No
-INITIAL_USER_POINTS	Starting points for new users (default: 100)	No
