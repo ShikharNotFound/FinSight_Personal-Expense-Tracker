@@ -1,24 +1,4 @@
 {
-  "services": [
-    {
-      "name": "frontend",
-      "src": ".",
-      "type": "static",
-      "staticDirectory": "dist"
-    },
-    {
-      "name": "backend",
-      "src": "backend",
-      "type": "serverless-function",
-      "runtime": "python3.10",
-      "handler": "index.app",
-      "build": {
-        "command": "pip install -r requirements.txt"
-      }
-    }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "backend/$1" }
-  ],
-  "version": 2
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }
