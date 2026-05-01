@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import bcrypt
@@ -89,7 +89,7 @@ def create_token(user_id: str, email: str) -> str:
     payload = {
         'sub': user_id,
         'email': email,
-        'exp': datetime.now(datetime.UTC) + timedelta(days=TOKEN_EXPIRE_DAYS),
+        'exp': datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRE_DAYS),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -133,7 +133,7 @@ def _record_point_transaction(
     if change < 0 and current_points + change < 0:
         return None, 'Insufficient points to complete this action', 400
 
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
 
     try:
         updated_user = users_collection.find_one_and_update(
@@ -201,7 +201,7 @@ def register():
         if users_collection.find_one({'email': email}, {'_id': 1}):
             return jsonify({'detail': 'Email already registered'}), 400
 
-        now = datetime.now(datetime.UTC)
+        now = datetime.now(timezone.utc)
         user = {
             'email': email,
             'hashed_password': hash_password(password),
@@ -452,7 +452,7 @@ def save_quiz_results(user_id: str):
     if users_collection is None:
         return _json_error(f'Database unavailable: {db_error}', 503)
 
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
     try:
         updated = users_collection.find_one_and_update(
             {'_id': user_oid},

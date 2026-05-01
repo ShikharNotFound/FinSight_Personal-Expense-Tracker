@@ -1,6 +1,7 @@
 const CONFIGURED_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
-const DIRECT_API_BASE_URL = (import.meta.env.VITE_API_TARGET || "http://127.0.0.1:8001").replace(/\/$/, "");
-const API_BASE_URLS = Array.from(new Set([CONFIGURED_API_BASE_URL, DIRECT_API_BASE_URL].filter(Boolean)));
+const DIRECT_API_BASE_URL = (import.meta.env.VITE_API_TARGET || "").replace(/\/$/, "");
+const LOCAL_API_BASE_URLS = import.meta.env.DEV ? ["http://127.0.0.1:8001"] : [];
+const API_BASE_URLS = Array.from(new Set([CONFIGURED_API_BASE_URL, DIRECT_API_BASE_URL, ...LOCAL_API_BASE_URLS].filter(Boolean)));
 
 const emitPointsUpdated = (userId, totalPoints) => {
   if (!userId || typeof totalPoints !== "number") return;
@@ -55,7 +56,7 @@ const requestJson = async (method, path, body, fallbackMessage) => {
   }
 
   throw new Error(
-    `Cannot reach backend. Tried ${API_BASE_URLS.join(", ")}. Start backend/auth_server.py on http://127.0.0.1:8001.`
+    `Cannot reach backend. Tried ${API_BASE_URLS.join(", ")}. Check your deployed /api/health endpoint and Vercel environment variables.`
   );
 };
 

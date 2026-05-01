@@ -58,8 +58,9 @@ const CARD_PALETTES = [
 ];
 
 const CONFIGURED_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
-const DIRECT_API_BASE_URL = (import.meta.env.VITE_API_TARGET || "http://127.0.0.1:8001").replace(/\/$/, "");
-const API_BASE_URLS = Array.from(new Set([CONFIGURED_API_BASE_URL, DIRECT_API_BASE_URL].filter(Boolean)));
+const DIRECT_API_BASE_URL = (import.meta.env.VITE_API_TARGET || "").replace(/\/$/, "");
+const LOCAL_API_BASE_URLS = import.meta.env.DEV ? ["http://127.0.0.1:8001"] : [];
+const API_BASE_URLS = Array.from(new Set([CONFIGURED_API_BASE_URL, DIRECT_API_BASE_URL, ...LOCAL_API_BASE_URLS].filter(Boolean)));
 
 const postJson = async (path, payload, fallbackMessage) => {
   for (const baseUrl of API_BASE_URLS) {

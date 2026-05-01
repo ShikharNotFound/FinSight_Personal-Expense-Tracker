@@ -523,10 +523,10 @@ body {
 `;
 
 const CONFIGURED_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
-const DIRECT_API_BASE_URL = (import.meta.env.VITE_API_TARGET || "http://127.0.0.1:8001").replace(/\/$/, "");
-const LOCALHOST_API_BASE_URL = "http://localhost:8001";
+const DIRECT_API_BASE_URL = (import.meta.env.VITE_API_TARGET || "").replace(/\/$/, "");
+const LOCALHOST_API_BASE_URLS = import.meta.env.DEV ? ["http://127.0.0.1:8001", "http://localhost:8001"] : [];
 const API_BASE_URLS = Array.from(
-  new Set([CONFIGURED_API_BASE_URL, DIRECT_API_BASE_URL, LOCALHOST_API_BASE_URL].filter(Boolean))
+  new Set([CONFIGURED_API_BASE_URL, DIRECT_API_BASE_URL, ...LOCALHOST_API_BASE_URLS].filter(Boolean))
 );
 
 const getErrorMessage = (data, fallback, rawText = "") => {
@@ -597,7 +597,7 @@ const postJson = async (path, payload, fallbackMessage) => {
   }
 
   throw new Error(
-    `Cannot reach auth server. Tried ${API_BASE_URLS.join(", ")}. Ensure your backend is running.`
+    `Cannot reach auth server. Tried ${API_BASE_URLS.join(", ")}. Check your deployed /api/health endpoint and Vercel environment variables.`
   );
 };
 

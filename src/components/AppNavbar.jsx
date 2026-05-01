@@ -28,7 +28,8 @@ const NAV_ITEMS = [
 const AUTH_API_BASES = Array.from(
   new Set([
     (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, ""),
-    (import.meta.env.VITE_API_TARGET || "http://127.0.0.1:8001").replace(/\/$/, ""),
+    (import.meta.env.VITE_API_TARGET || "").replace(/\/$/, ""),
+    ...(import.meta.env.DEV ? ["http://127.0.0.1:8001"] : []),
   ].filter(Boolean))
 );
 
