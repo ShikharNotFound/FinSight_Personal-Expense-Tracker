@@ -120,7 +120,7 @@ The image upload/OCR API should run as a Docker web service because it needs the
 On Render, use the included `render.yaml`, or create a Web Service with:
 
 ```bash
-Dockerfile: Dockerfile.transaction
+Dockerfile: Dockerfile
 Health check path: /health
 ```
 
