@@ -44,8 +44,11 @@ point_transactions_collection = db['point_transactions']
 _indexes_ready = False
 
 app = Flask(__name__)
-CORS(app)
 
+
+CORS(app, origins=[
+    os.getenv('FRONTEND_URL', 'http://localhost:5173')  # fallback for local dev
+])
 
 def _json_error(message: str, status: int = 400):
     return jsonify({'detail': message}), status
@@ -86,7 +89,7 @@ def create_token(user_id: str, email: str) -> str:
     payload = {
         'sub': user_id,
         'email': email,
-        'exp': datetime.utcnow() + timedelta(days=TOKEN_EXPIRE_DAYS),
+        'exp': datetime.now(datetime.UTC) + timedelta(days=TOKEN_EXPIRE_DAYS),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -130,7 +133,7 @@ def _record_point_transaction(
     if change < 0 and current_points + change < 0:
         return None, 'Insufficient points to complete this action', 400
 
-    now = datetime.utcnow()
+    now = datetime.now(datetime.UTC)
 
     try:
         updated_user = users_collection.find_one_and_update(
@@ -198,7 +201,7 @@ def register():
         if users_collection.find_one({'email': email}, {'_id': 1}):
             return jsonify({'detail': 'Email already registered'}), 400
 
-        now = datetime.utcnow()
+        now = datetime.now(datetime.UTC)
         user = {
             'email': email,
             'hashed_password': hash_password(password),
@@ -449,7 +452,7 @@ def save_quiz_results(user_id: str):
     if users_collection is None:
         return _json_error(f'Database unavailable: {db_error}', 503)
 
-    now = datetime.utcnow()
+    now = datetime.now(datetime.UTC)
     try:
         updated = users_collection.find_one_and_update(
             {'_id': user_oid},
@@ -482,7 +485,6 @@ def save_quiz_results(user_id: str):
         200,
     )
 
-
 if __name__ == '__main__':
-    auth_port = int(os.getenv('AUTH_PORT', '8001'))
-    app.run(host='0.0.0.0', port=auth_port, debug=False, use_reloader=False)
+    port = int(os.environ.get('PORT', 8001))  # Vercel uses PORT env var
+    app.run(host='0.0.0.0', port=port, debug=False)
