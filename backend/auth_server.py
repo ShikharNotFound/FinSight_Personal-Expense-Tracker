@@ -24,7 +24,7 @@ if not MONGO_URI or not JWT_SECRET:
         "CRITICAL: MONGO_URI and JWT_SECRET_KEY must be set in environment."
     )
 
-DB_NAME = os.getenv('DB_NAME')
+DB_NAME = os.getenv('DB_NAME', 'Users').strip() or 'Users'
 JWT_ALGORITHM = 'HS256'
 TOKEN_EXPIRE_DAYS = 7
 INITIAL_USER_POINTS = int(os.getenv('INITIAL_USER_POINTS', '100'))

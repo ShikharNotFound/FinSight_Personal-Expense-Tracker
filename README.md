@@ -99,3 +99,30 @@ The React development server will start at http://localhost:5173.
 4. Access the Application
 Visit http://localhost:5173 in your browser. Register a new account to start using FinSight.
 
+## Deployment
+
+### Vercel
+
+Deploy the React app and Flask auth API on Vercel. Set these environment variables:
+
+```bash
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority
+JWT_SECRET_KEY=your-strong-secret-key-here-min-32-chars
+DB_NAME=Users
+FRONTEND_URL=https://your-vercel-app.vercel.app
+VITE_TXN_API_URL=https://your-transaction-service.onrender.com
+```
+
+### Transaction OCR service
+
+The image upload/OCR API should run as a Docker web service because it needs the native Tesseract binary.
+
+On Render, use the included `render.yaml`, or create a Web Service with:
+
+```bash
+Dockerfile: Dockerfile.transaction
+Health check path: /health
+```
+
+Set the same `MONGO_URI`, `JWT_SECRET_KEY`, `DB_NAME=Users`, and `COLLECTION_NAME=transactions` values there. After it deploys, copy that service URL into Vercel as `VITE_TXN_API_URL`.
+

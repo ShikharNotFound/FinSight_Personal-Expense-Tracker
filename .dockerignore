@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+.env
+*.env
+backend/.env
+Transactions/images
+Transactions/output
+Transactions/code1 copy 2/.vscode
+Transactions/code1 copy 2/ledger_transactions.json

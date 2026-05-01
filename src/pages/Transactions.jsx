@@ -149,9 +149,8 @@ const styles = `
 const formatINR = (amt) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amt);
 
 const TXN_API_BASES = Array.from(new Set([
-  (import.meta.env.VITE_TXN_API_URL || '').replace(/\/$/, ''),
-  'http://127.0.0.1:8000',
-  'http://localhost:8000',
+  (import.meta.env.VITE_TXN_API_URL || '/api').replace(/\/$/, ''),
+  ...(import.meta.env.DEV ? ['http://127.0.0.1:8000', 'http://localhost:8000'] : []),
 ].filter(Boolean)));
 
 async function readErrorMessage(res, fallback) {

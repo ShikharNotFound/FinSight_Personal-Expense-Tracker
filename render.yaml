@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: finsight-transaction-service
+    env: docker
+    dockerfilePath: ./Dockerfile.transaction
+    healthCheckPath: /health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: DB_NAME
+        value: Users
+      - key: COLLECTION_NAME
+        value: transactions

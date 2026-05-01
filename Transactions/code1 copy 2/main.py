@@ -35,6 +35,12 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 load_dotenv(BASE_DIR.parent.parent / "scripts" / ".env")
 load_dotenv(BASE_DIR.parent.parent / "backend" / ".env")
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(BASE_DIR.parent.parent))).resolve()
+WORKSPACE_DIR = Path(os.getenv("TRANSACTION_WORKSPACE_DIR", str(BASE_DIR.parent))).resolve()
+IMAGES_DIR = Path(os.getenv("IMAGES_DIR", str(WORKSPACE_DIR / "images"))).resolve()
+OUTPUTS_DIR = Path(os.getenv("OUTPUTS_DIR", str(WORKSPACE_DIR / "output"))).resolve()
+SCRIPTS_DIR = Path(os.getenv("SCRIPTS_DIR", str(PROJECT_ROOT / "scripts"))).resolve()
+IMPORT_SCRIPT_PATH = SCRIPTS_DIR / "import_json.py"
 
 app = FastAPI(title="Transaction OCR + Classifier API", version="4.0.0")
 
@@ -69,20 +75,12 @@ DEBIT_KEYWORDS = {"debit", "debited", "purchase", "payment", "withdrawal", "dr"}
 # In-memory ledger so /summary and /insights can run directly after /manual or /upload.
 TRANSACTION_LEDGER: list["PredictedTransaction"] = []
 LEDGER_PATH = BASE_DIR / "ledger_transactions.json"
-WORKSPACE_DIR = BASE_DIR.parent
-IMAGES_DIR = WORKSPACE_DIR / "images"
-OUTPUTS_DIR = WORKSPACE_DIR / "output"
-SCRIPTS_DIR = BASE_DIR.parent.parent / "scripts"
-IMPORT_SCRIPT_PATH = SCRIPTS_DIR / "import_json.py"
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff"}
 
-MONGO_URI = os.getenv(
-    "MONGO_URI",
-    "mongodb+srv://shikharsaxena7777_db_user:Codecode123@globathon.rl4ckeo.mongodb.net/?appName=Globathon",
-).strip()
+MONGO_URI = os.getenv("MONGO_URI", "").strip()
 DB_NAME = os.getenv("DB_NAME", "Users").strip() or "Users"
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "transactions").strip() or "transactions"
-JWT_SECRET = os.getenv("JWT_SECRET_KEY", "c84d3aa356344f5e0b93915b9d16b073f")
+JWT_SECRET = os.getenv("JWT_SECRET_KEY", "").strip()
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 
@@ -681,6 +679,8 @@ def _extract_user_id_from_auth(authorization: Optional[str]) -> str:
     token = authorization.split(" ", 1)[1].strip()
     if not token:
         raise HTTPException(status_code=401, detail="Invalid bearer token")
+    if not JWT_SECRET:
+        raise HTTPException(status_code=500, detail="JWT_SECRET_KEY is missing on transaction service")
 
     if jwt is not None:
         try:
@@ -957,4 +957,9 @@ if __name__ == "__main__":
             sys.exit(1)
         sys.exit(0)
 
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "8000")),
+        reload=False,
+    )

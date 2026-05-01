@@ -8,7 +8,7 @@ const API_URL = (
   import.meta.env.VITE_AUTH_API_URL ||
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_TARGET ||
-  'http://127.0.0.1:8001'
+  '/api'
 ).replace(/\/$/, '');
 
 export const AuthProvider = ({ children }) => {

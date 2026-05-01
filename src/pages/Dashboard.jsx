@@ -106,7 +106,7 @@ const TODAY = 18; // Oct 18
 const TXN_API_BASE = (
   import.meta.env.VITE_TXN_API_URL ||
   import.meta.env.VITE_API_URL ||
-  "http://127.0.0.1:8000"
+  "/api"
 ).replace(/\/$/, "");
 const AUTH_API_BASES = Array.from(new Set([
   (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, ""),
